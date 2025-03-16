@@ -76,5 +76,6 @@ fn showHelpMenu() void {
         \\  debug       Run wasm file in debug mode
         \\  validate    Validate wasm file
         \\  compile     Compile wat format to wasm format
+        \\
     ) catch unreachable;
 }
