@@ -1,46 +1,80 @@
-//! By convention, main.zig is where your main function lives in the case that
-//! you are building an executable. If you are making a library, the convention
-//! is to delete this file and start with root.zig instead.
+const std = @import("std");
+const stdout_writer = std.io.getStdOut().writer();
+
+const Command = enum {
+    RUN,    // Lệnh khởi chạy file wasm
+    HELP,   // Menu trợ giúp
+    VERSION,    // Kiểm tra phiên bản
+    DEBUG,  // debug file
+    VALIDATE,   // Kiểm tra tính hợp lệ của file wasm
+    COMPILE, // Biên dịch file wat sang wasm
+
+    fn getCommand(command_str: []const u8) ?Command {
+        // Trả ra command tương ứng dựa trên command_str
+        if (command_map.get(command_str)) |command| {
+            return command;
+        } else {
+            return null;    // Không tìm thấy command tương ứng
+        }
+    }
+};
+
+const command_map: std.StaticStringMap(Command) = std.StaticStringMap(Command).initComptime(.{
+    .{"run", .RUN},
+    .{"help", .HELP},
+    .{"version", .VERSION},
+    .{"debug", .DEBUG},
+    .{"validate", .VALIDATE},
+    .{"compile", .COMPILE},
+});
 
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+    const args_alloc = std.process.argsAlloc(std.heap.page_allocator) catch unreachable;
+    defer std.process.argsFree(std.heap.page_allocator, args_alloc);
 
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
-
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
-
-    try bw.flush(); // Don't forget to flush!
-}
-
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // Try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
-}
-
-test "use other module" {
-    try std.testing.expectEqual(@as(i32, 150), lib.add(100, 50));
-}
-
-test "fuzz example" {
-    const Context = struct {
-        fn testOne(context: @This(), input: []const u8) anyerror!void {
-            _ = context;
-            // Try passing `--fuzz` to `zig build test` and see if it manages to fail this test case!
-            try std.testing.expect(!std.mem.eql(u8, "canyoufindme", input));
+    // Kiểm tra danh sách args
+    if (args_alloc.len > 1) {
+        // Kiểm tra xem lệnh được nhập có nằm trong danh sách command không
+        if (Command.getCommand(args_alloc[1])) |command| {
+            // Thực thi theo từng command
+            switch (command) {
+                .RUN => {
+                    stdout_writer.writeAll("run command") catch unreachable;
+                },
+                .HELP => {
+                    showHelpMenu();
+                },
+                .VERSION => {
+                    stdout_writer.print("Oryx WASM Runtime version {s}\n", .{"alpha"}) catch unreachable;
+                },
+                .DEBUG => {
+                    stdout_writer.writeAll("run at debug mode") catch unreachable;
+                },
+                .VALIDATE => {
+                    stdout_writer.writeAll("validate wasm file") catch unreachable;
+                },
+                .COMPILE => {
+                    stdout_writer.writeAll("compile wat file to wasm") catch unreachable;
+                },
+            }
+        } else {
+            // Không thể nhận diện command đầu vào
+            stdout_writer.writeAll("Error: Command is not supported.\n") catch unreachable;
         }
-    };
-    try std.testing.fuzz(Context{}, Context.testOne, .{});
+    } else {
+        // Trường hợp không có lệnh nào được gọi
+        showHelpMenu();
+    }
 }
 
-const std = @import("std");
-
-/// This imports the separate module containing `root.zig`. Take a look in `build.zig` for details.
-const lib = @import("oryx_lib");
+fn showHelpMenu() void {
+    stdout_writer.writeAll(
+        \\Usage: oryx [command] [options]
+        \\  run         Run wasm file
+        \\  help        Show help menu
+        \\  version     Print number version of this runtime
+        \\  debug       Run wasm file in debug mode
+        \\  validate    Validate wasm file
+        \\  compile     Compile wat format to wasm format
+    ) catch unreachable;
+}
