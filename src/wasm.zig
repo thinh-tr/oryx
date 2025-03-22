@@ -10,7 +10,7 @@ pub const Header = struct {
 pub const Section = struct {
     id: u8,
     payload_len: u32,
-    payload: []u8,
+    payload: ?[]u8,
 };
 
 // Wasm Module
