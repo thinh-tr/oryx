@@ -2,8 +2,14 @@ const types = @import("types.zig");
 
 // Wasm Header info
 pub const Header = struct {
-    magic: []const u8,
+    magic: u32,
     version: u32,
+
+    const Self = @This();
+
+    pub fn isValidMagic(self: *Self) bool {
+        return self.*.magic == 0x6D736100;  // magic = "\0asm"
+    }
 };
 
 // Wasm Section
