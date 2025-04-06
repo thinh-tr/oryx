@@ -2,7 +2,7 @@ const types = @import("types.zig");
 
 // Wasm Header info
 pub const Header = struct {
-    magic: u32,
+    magic: []const u8,
     version: u32,
 };
 
